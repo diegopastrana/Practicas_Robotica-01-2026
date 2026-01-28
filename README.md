@@ -9,6 +9,10 @@ El desarrollo de estas prácticas, centradas en la **actualización y puesta en 
 - ROBOTIS. *OpenCR 1.0 Controller – Specifications and Usage*.  
   https://emanual.robotis.com/docs/en/parts/controller/opencr10/
 
+### Documentación oficial de ROS 2
+- Open Robotics. *Installing ROS 2 via Debian Packages (Ubuntu) — ROS 2 Jazzy*.  
+  https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html
+
 ### Documentación oficial de Raspberry Pi
 - Raspberry Pi Foundation. *Getting Started Documentation*.  
   https://www.raspberrypi.com/documentation/computers/getting-started.html
