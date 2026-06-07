@@ -380,10 +380,73 @@ sudo -E env PATH=$PATH \
 
 ---
 
+## Experimento multi-robot completo
+
+Jiminy está instalado en ambos robots. Con los dos bots corriendo simultáneamente con sus respectivos namespaces, bringup, Jiminy y el nodo puente, se obtienen decisiones en tiempo real que incorporan la información compartida entre robots.
+
+### Lanzar el sistema completo
+
+**Bot1 (3 terminales SSH):**
+```bash
+# Terminal 1
+source ~/.bashrc && ros2 launch turtlebot3_bringup robot.launch.py namespace:=tb3_0
+
+# Terminal 2
+source ~/.bashrc && ros2 launch jiminy_bringup jiminy.launch.py config_file:=turtlebot3_obstacle.yaml
+
+# Terminal 3 — modo multi-robot con peer fiable
+source ~/.bashrc && ros2 run jiminy_ros lidar_jiminy_bridge.py --ros-args \
+  -p namespace:=tb3_0 -p peer_namespace:=tb3_1 -p peer_trusted:=true
+```
+
+**Bot2 (3 terminales SSH):**
+```bash
+# Terminal 4
+source ~/.bashrc && ros2 launch turtlebot3_bringup robot.launch.py namespace:=tb3_1
+
+# Terminal 5
+source ~/.bashrc && ros2 launch jiminy_bringup jiminy.launch.py config_file:=turtlebot3_obstacle.yaml
+
+# Terminal 6 — modo multi-robot con peer fiable
+source ~/.bashrc && ros2 run jiminy_ros lidar_jiminy_bridge.py --ros-args \
+  -p namespace:=tb3_1 -p peer_namespace:=tb3_0 -p peer_trusted:=true
+```
+
+### Verificar decisiones desde el PC
+
+```bash
+docker exec -it ros_humble bash
+source /opt/ros/humble/setup.bash
+ros2 topic echo /tb3_0/jiminy_decision
+ros2 topic echo /tb3_1/jiminy_decision
+```
+
+### Ejemplo de salida modo multi-robot con peer fiable
+
+```
+data: d_slow_down | dist=0.520m | facts=['w2', 'w4', 'w6', 'w7'] | accepted=['d_prefer_safe', 'd_slow_down', 'i_caution', 'i_peer_danger']
+data: d_stop      | dist=0.122m | facts=['w1', 'w4', 'w6', 'w7'] | accepted=['d_prefer_safe', 'd_stop', 'i_danger', 'i_peer_danger']
+```
+
+### Ejemplo de salida modo multi-robot con peer comprometido
+
+```bash
+# Relanzar nodo puente del bot1 con peer no fiable
+ros2 run jiminy_ros lidar_jiminy_bridge.py --ros-args \
+  -p namespace:=tb3_0 -p peer_namespace:=tb3_1 -p peer_trusted:=false
+```
+
+```
+data: d_stop | dist=0.223m | facts=['w1', 'w4', 'w6', 'w8'] | accepted=['d_ignore_peer', 'd_prefer_safe', 'd_stop', 'd_use_own_sensors']
+data: d_slow_down | dist=0.500m | facts=['w2', 'w4', 'w6', 'w8'] | accepted=['d_ignore_peer', 'd_prefer_safe', 'd_slow_down', 'd_use_own_sensors']
+```
+
+Con peer comprometido (`w8`), `d_ignore_peer` y `d_use_own_sensors` aparecen en las normas aceptadas, demostrando que el robot ignora los datos manipulados y decide únicamente con sus propios sensores.
+
+---
+
 ## Trabajo pendiente
 
-- Instalar Jiminy en Bot2
-- Configurar modo multi-robot completo con comunicación entre robots
 - Implementar SROS2 para autenticación y cifrado
 - Comparar tráfico DDS con y sin SROS2
 - Conectar SROS2 con Jiminy: peer autenticado → `w7`, no autenticado → `w8`
