@@ -456,7 +456,7 @@ Con peer comprometido (`w8`), `d_ignore_peer` y `d_use_own_sensors` aparecen en 
 
 ## Referencias
 
-- [ROBOTIS TurtleBot3 e-Manual](https://emanual.robotis.com/docs/en/platform/turtlebot3/)
+- [ROBOTIS TurtleBot3 e-Manual](https://emanual.robotis.com/docs/en/platform/turtlebot3/opencr_setup/)
 - [ROS2 Humble Documentation](https://docs.ros.org/en/humble/)
 - [Jiminy Framework](https://github.com/jiminy-framework)
 - [CAI Framework - Alias Robotics](https://github.com/aliasrobotics/cai)
