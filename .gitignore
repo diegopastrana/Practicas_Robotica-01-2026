@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# ROS 2
+build/
+install/
+log/
+*.bag
+*.db3
+
+# Network captures
+*.pcap
+*.pcapng
+captures/
+
+# SROS 2 sensitive material
+keystore/
+*.key
+*.key.pem
+private/
+enclaves/
+identity_ca.key.pem
+permissions_ca.key.pem
+
+# LaTeX temporary files
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.bbl
+*.blg
+*.synctex.gz
+
+# Temporary files
+.DS_Store
+*.tmp
+*.bak
+README_old.md
