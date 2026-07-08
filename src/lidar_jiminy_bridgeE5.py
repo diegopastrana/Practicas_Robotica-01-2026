@@ -223,17 +223,32 @@ class LidarJiminyBridge(Node):
         # la respuesta asíncrona de Jiminy (que puede llegar desordenada
         # bajo llamadas concurrentes). Se aplica el filtro de relevancia
         # espacial por TF antes de decidir.
-        peer_relevant = self._peer_is_spatially_relevant()
 
-        if peer_relevant and self.peer_critical:
+        # Caso C (E5): si el peer no es fiable (no autenticado / posible
+        # compromiso), ni el LiDAR propio (atacado) ni el peer son fuentes
+        # válidas de información. La única decisión segura es parar,
+        # independientemente de lo que el peer reporte.
+        peer_relevant = 'N/A'  # no aplica en Caso C, se sobrescribe en Caso B
+        if not self.peer_trusted:
             new_action = 'd_stop'
-            fact_used = 'w6b'
-        elif peer_relevant and self.peer_obstacle:
-            new_action = 'd_slow_down'
-            fact_used = 'w6'
+            fact_used = 'w8'
+            self.get_logger().warn(
+                'Peer untrusted — forcing d_stop regardless of peer report '
+                '(Case C, no reliable data source).',
+                throttle_duration_sec=2.0
+            )
         else:
-            new_action = 'd_move'
-            fact_used = 'w5'
+            peer_relevant = self._peer_is_spatially_relevant()
+
+            if peer_relevant and self.peer_critical:
+                new_action = 'd_stop'
+                fact_used = 'w6b'
+            elif peer_relevant and self.peer_obstacle:
+                new_action = 'd_slow_down'
+                fact_used = 'w6'
+            else:
+                new_action = 'd_move'
+                fact_used = 'w5'
 
         self.current_action = new_action
 
