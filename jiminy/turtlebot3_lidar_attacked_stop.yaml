@@ -1,0 +1,217 @@
+# -------------------------------------------------------------------------
+# Jiminy scenario — E5: LiDAR atacado, parada por precaución
+# TFM: Análisis de la toma de decisiones y la ciberseguridad en sistemas
+#      multi-robot distribuidos basados en ROS2
+# Universidad de León — Máster en Investigación en Ciberseguridad
+#
+# Escenario: el LiDAR propio ha sido comprometido (lidar_attacked:=true).
+# El nodo puente NO introduce w1/w2/w3 (ignora lecturas propias).
+# Hechos disponibles: w4 (en movimiento) y opcionalmente w8 (sin peer fiable).
+# Resultado esperado: d_prefer_safe → d_stop por precaución.
+# -------------------------------------------------------------------------
+
+description: "E5 — LiDAR atacado: el robot para por precaución al no tener datos fiables propios."
+
+context:
+  # --- Own LiDAR readings (no introducidos cuando lidar_attacked=true) ---
+  - id: w1
+    description: "The robot detects an obstacle closer than 30 cm."
+
+  - id: w2
+    description: "The robot detects an obstacle between 30 cm and 60 cm."
+
+  - id: w3
+    description: "No obstacle detected within 60 cm range."
+
+  # --- Robot state ---
+  - id: w4
+    description: "The robot is in motion."
+
+  # --- Shared information from peer robot ---
+  - id: w5
+    description: "The peer robot reports no obstacle in its path."
+
+  - id: w6
+    description: "The peer robot reports an obstacle in its path."
+
+  # --- Trust status ---
+  - id: w7
+    description: "The peer robot data is considered trustworthy (authenticated)."
+
+  - id: w8
+    description: "The peer robot data is considered untrustworthy (possible compromise)."
+
+  # --- Sensor integrity ---
+  - id: w9
+    description: "Own LiDAR data is unavailable or has been compromised."
+
+
+# ========================================================================
+# NORMATIVE RULES
+# ========================================================================
+norms:
+
+  # ------------------------------------------------------
+  # SAFETY RULES — immediate danger
+  # ------------------------------------------------------
+
+  - id: S1
+    body: ["w1"]
+    conclusion: "i_danger"
+    type: "c"
+    stakeholder: "Safety"
+    description: "An obstacle closer than 30 cm counts as immediate danger."
+
+  - id: S2
+    body: ["i_danger", "w4"]
+    conclusion: "d_stop"
+    type: "r"
+    stakeholder: "Safety"
+    description: "The robot must stop immediately when in danger and moving."
+
+  # ------------------------------------------------------
+  # NAVIGATION RULES
+  # ------------------------------------------------------
+
+  - id: N1
+    body: ["w2"]
+    conclusion: "i_caution"
+    type: "c"
+    stakeholder: "Navigation"
+    description: "An obstacle between 30 and 60 cm counts as a caution zone."
+
+  - id: N2
+    body: ["i_caution", "w4"]
+    conclusion: "d_slow_down"
+    type: "r"
+    stakeholder: "Navigation"
+    description: "The robot must slow down when entering the caution zone."
+
+  - id: N3
+    body: ["w3", "w4"]
+    conclusion: "d_move"
+    type: "p"
+    stakeholder: "Navigation"
+    description: "The robot is permitted to keep moving when no obstacle is detected."
+
+  # ------------------------------------------------------
+  # SENSOR INTEGRITY RULES
+  # ------------------------------------------------------
+
+  - id: SI1
+    body: ["w9"]
+    conclusion: "i_no_own_data"
+    type: "c"
+    stakeholder: "Safety"
+    description: "When own LiDAR is compromised, the robot has no reliable own sensor data."
+
+  - id: SI2
+    body: ["i_no_own_data", "w4"]
+    conclusion: "d_stop"
+    type: "r"
+    stakeholder: "Safety"
+    description: "Without reliable own sensor data, the robot must stop as a safety precaution."
+
+  # ------------------------------------------------------
+  # CYBERSECURITY RULES — untrusted peer
+  # ------------------------------------------------------
+
+  - id: CS1
+    body: ["w8"]
+    conclusion: "i_untrusted"
+    type: "c"
+    stakeholder: "Security"
+    description: "Data from an untrustworthy peer counts as potentially manipulated."
+
+  - id: CS2
+    body: ["i_untrusted"]
+    conclusion: "d_ignore_peer"
+    type: "r"
+    stakeholder: "Security"
+    description: "The robot must ignore peer data when the source is untrustworthy."
+
+  - id: CS3
+    body: ["i_untrusted"]
+    conclusion: "d_use_own_sensors"
+    type: "r"
+    stakeholder: "Security"
+    description: "When peer data is untrusted, the robot must rely only on its own sensors."
+
+  # ------------------------------------------------------
+  # MANUFACTURER RULES — conservative defaults
+  # ------------------------------------------------------
+
+  - id: M1
+    body: []
+    conclusion: "d_prefer_safe"
+    type: "r"
+    stakeholder: "Manufacturer"
+    description: "When in doubt, the robot must prefer the safest action."
+
+
+# ========================================================================
+# CONTRARIETIES
+# ========================================================================
+contrariness:
+
+  d_stop:
+    description: "Stopping conflicts with moving or slowing down."
+    contraries: ["d_move", "d_slow_down"]
+
+  d_slow_down:
+    description: "Slowing down conflicts with stopping and free movement."
+    contraries: ["d_stop", "d_move"]
+
+  d_move:
+    description: "Moving conflicts with stopping or slowing down."
+    contraries: ["d_stop", "d_slow_down"]
+
+  d_ignore_peer:
+    description: "Ignoring peer data conflicts with using it for decisions."
+    contraries: ["p_continue", "d_slow_down"]
+
+  d_use_own_sensors:
+    description: "Using only own sensors conflicts with peer-influenced decisions."
+    contraries: ["p_continue"]
+
+  p_continue:
+    description: "Continuing movement conflicts with stopping."
+    contraries: ["d_stop"]
+
+  d_prefer_safe:
+    description: "Safety preference supports stopping over moving."
+    contraries: ["d_move"]
+
+
+# ========================================================================
+# PRIORITIES
+# ========================================================================
+priorities:
+
+  d_stop:
+    value: 10
+    description: "Stopping has the highest priority — immediate safety."
+
+  d_slow_down:
+    value: 6
+    description: "Slowing down has high priority — caution zone."
+
+  d_use_own_sensors:
+    value: 8
+    description: "Own sensor data is highly trusted when peer is compromised."
+
+  d_ignore_peer:
+    value: 8
+    description: "Ignoring untrusted peer has high priority for security."
+
+  d_prefer_safe:
+    value: 7
+    description: "Conservative default has high priority."
+
+  p_continue:
+    value: 3
+    description: "Continuing movement has low priority compared to safety."
+
+  d_move:
+    value: 2
+    description: "Free movement has the lowest priority."
