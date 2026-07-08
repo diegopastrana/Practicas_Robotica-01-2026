@@ -11,14 +11,16 @@ La integración automática entre ambas capas no forma parte de la implementaci�
 
 ## Objetivo del repositorio
 
-Este repositorio recoge el material técnico desarrollado durante el TFM:
+Este repositorio recoge el material técnico desarrollado durante el TFM que se ha considerado publicable sin exponer información sensible del entorno experimental.
 
-- nodos ROS 2 implementados;
-- escenarios y reglas normativas utilizadas con Jiminy;
-- ficheros de configuración de los experimentos;
-- configuraciones relacionadas con SROS 2;
-- scripts auxiliares de ejecución y análisis;
-- documentación complementaria del entorno experimental.
+Actualmente incluye:
+
+- escenarios normativos utilizados con Jiminy;
+- código Python del nodo puente empleado en el experimento E5;
+- documentación complementaria del entorno experimental;
+- información sobre la captura y análisis de tráfico DDS.
+
+No se incluyen capturas `.pcap`, claves privadas, keystores completos ni certificados sensibles.
 
 ## Entorno utilizado
 
@@ -33,74 +35,55 @@ El entorno experimental empleado en el trabajo fue el siguiente:
 - Jiminy / jiminy_ros
 - Wireshark / tshark
 
-## Estructura prevista del repositorio
+## Estructura actual del repositorio
 
 ```text
 .
 ├── README.md
+├── .gitignore
 ├── src/
-│   └── lidar_jiminy_bridge.py
-├── config/
-│   ├── parameters_e1.yaml
-│   ├── parameters_e2.yaml
-│   ├── parameters_e3.yaml
-│   ├── parameters_e4.yaml
-│   └── parameters_e5.yaml
-├── jiminy/
-│   ├── e1_basic_safety.yaml
-│   ├── e2_stop_threshold.yaml
-│   ├── e3_peer_trusted.yaml
-│   ├── e4_distributed_decision.yaml
-│   └── e5_peer_untrusted.yaml
-├── sros2/
-│   ├── policies/
-│   │   ├── governance.xml
-│   │   └── permissions.xml
-│   └── README.md
-├── scripts/
-│   ├── run_e1.sh
-│   ├── run_e2.sh
-│   ├── run_e3.sh
-│   ├── run_e4.sh
-│   ├── run_e5.sh
-│   └── analyze_rtps.sh
-└── docs/
-    └── figuras/
+│   └── lidar_jiminy_bridgeE5.py
+└── jiminy/
+    ├── turtlebot3_obstacle.yaml
+    ├── turtlebot3_lidar_attacked_peer.yaml
+    └── turtlebot3_lidar_attacked_stop.yaml
 ```
 
-La estructura anterior resume la organización del material técnico asociado al TFM. Los nombres concretos de los ficheros pueden variar respecto al entorno local original, pero se mantiene la separación entre código, configuración, escenarios normativos, scripts y documentación auxiliar.
+## Código incluido
 
-## Nodo principal
-
-El nodo principal desarrollado es:
+El archivo actualmente incluido en la carpeta `src/` es:
 
 ```text
-src/lidar_jiminy_bridge.py
+src/lidar_jiminy_bridgeE5.py
 ```
 
-Este nodo actúa como puente entre la información sensorial de ROS 2 y el modelo normativo de Jiminy. Su función es transformar el estado observado del entorno y del peer en hechos normativos que permiten determinar la acción del robot.
+Este nodo actúa como puente entre la información sensorial de ROS 2 y el modelo normativo de Jiminy en el escenario E5. Su función es transformar el estado observado del entorno y del peer en hechos normativos que permiten determinar la acción del robot.
 
-Entre los hechos considerados se incluyen:
+En particular, este escenario representa una situación conservadora en la que ni el LiDAR propio ni el peer se consideran fuentes fiables, por lo que el sistema debe detener el robot aunque el peer indique que el camino está despejado.
 
-- presencia o ausencia de obstáculo;
-- fiabilidad del LiDAR propio;
-- estado de confianza del peer;
-- disponibilidad de información remota;
-- decisión de avanzar o detenerse.
+## Escenarios Jiminy incluidos
+
+La carpeta `jiminy/` contiene los escenarios normativos utilizados en los experimentos:
+
+| Archivo | Uso en el TFM | Descripción |
+|---|---|---|
+| `turtlebot3_obstacle.yaml` | E1 y E2 | Escenario base de seguridad ante obstáculos. En E2 se reutiliza modificando el parámetro `distance_critical:=0.15` para demostrar configurabilidad en tiempo de ejecución sin recompilar. |
+| `turtlebot3_lidar_attacked_peer.yaml` | E3 | Escenario con LiDAR propio comprometido y uso de información procedente del peer. |
+| `turtlebot3_lidar_attacked_stop.yaml` | E5 | Escenario en el que ni el sensor propio ni el peer son fiables, activando una decisión conservadora de parada. |
 
 ## Casos de prueba
 
-La validación experimental se estructuró en cinco casos de prueba:
+La validación experimental descrita en la memoria se estructuró en cinco casos de prueba:
 
-| Caso | Descripción |
-|---|---|
-| E1 | Validación de la cadena normativa básica de seguridad ante obstáculos. |
-| E2 | Configurabilidad del umbral de parada. |
-| E3 | Autonomía con sensor propio fiable. |
-| E4 | Recuperación de capacidad de decisión mediante un peer fiable cuando el LiDAR propio queda comprometido. |
-| E5 | Parada forzada cuando ni el sensor propio ni el peer son fiables. |
+| Caso | Material incluido en este repositorio | Descripción |
+|---|---|---|
+| E1 | `jiminy/turtlebot3_obstacle.yaml` | Validación de la cadena normativa básica de seguridad ante obstáculos. |
+| E2 | `jiminy/turtlebot3_obstacle.yaml` con `distance_critical:=0.15` | Configurabilidad del umbral de parada en tiempo de ejecución, sin modificar ni recompilar el código. |
+| E3 | `jiminy/turtlebot3_lidar_attacked_peer.yaml` | Evaluación del comportamiento cuando el LiDAR propio queda comprometido y se dispone de información procedente del peer. |
+| E4 | Documentado en la memoria | Comparación entre la toma de decisiones aislada y distribuida en el sistema multi-robot. |
+| E5 | `jiminy/turtlebot3_lidar_attacked_stop.yaml` y `src/lidar_jiminy_bridgeE5.py` | Parada forzada cuando ni el sensor propio ni el peer son fiables. |
 
-Los experimentos E3, E4 y E5 se ejecutaron en un escenario multi-robot. La validación de Jiminy se realizó sin SROS 2 activo, mientras que la validación de SROS 2 se realizó mediante análisis comparativo del tráfico DDS.
+Los experimentos multi-robot se ejecutaron sin SROS 2 activo para validar la capa de razonamiento basada en Jiminy. La validación de SROS 2 se realizó de forma independiente mediante análisis comparativo del tráfico DDS.
 
 ## Análisis de tráfico DDS
 
@@ -141,7 +124,7 @@ En caso de incluir material relacionado con SROS 2, se recomienda publicar únic
 
 ## Relación con la memoria
 
-Este repositorio complementa la memoria del TFM proporcionando trazabilidad técnica del trabajo realizado. La memoria describe el diseño, la metodología, los resultados experimentales y las limitaciones del enfoque propuesto, mientras que este repositorio recoge el material práctico empleado durante la implementación y validación.
+Este repositorio complementa la memoria del TFM proporcionando trazabilidad técnica del trabajo realizado. La memoria describe el diseño, la metodología, los resultados experimentales y las limitaciones del enfoque propuesto, mientras que este repositorio recoge parte del material práctico empleado durante la implementación y validación.
 
 ## Autor
 
